@@ -16,3 +16,9 @@ desktop.ini
 *.tmp
 *.temp
 ~*
+
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+transportistas.db
