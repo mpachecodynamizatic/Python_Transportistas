@@ -10,13 +10,21 @@ Demuestra las diferentes funcionalidades:
 import sys
 from pathlib import Path
 from decimal import Decimal
+from datetime import datetime
 
 # Añadir el directorio raíz al path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from database import get_db_manager
 from services import TransportistaSelector
-from models import Pedido, Transportista, ServicioTransportista, Tarifa
+from models import Pedido, Transportista, ServicioTransportista, Tarifa, TipoEntrega, MetodoCalculo
+
+try:
+    from openpyxl import Workbook, load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    EXCEL_DISPONIBLE = True
+except ImportError:
+    EXCEL_DISPONIBLE = False
 
 
 def imprimir_separador(caracter="=", longitud=80):
@@ -119,6 +127,227 @@ def comparar_transportistas(pedido_id: int, session):
     print()
 
 
+def exportar_tarifas_excel(session):
+    """Exporta todas las tarifas a un archivo Excel"""
+    if not EXCEL_DISPONIBLE:
+        print("\n❌ ERROR: La librería openpyxl no está instalada.")
+        print("Instala con: pip install openpyxl")
+        return
+    
+    try:
+        # Crear libro de trabajo
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Tarifas"
+        
+        # Estilo del encabezado
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Encabezados
+        headers = [
+            "ID", "Transportista", "Servicio", "Tipo Entrega", "Método Cálculo",
+            "Provincia", "Rango Min", "Rango Max", "Precio Fijo"
+        ]
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+        
+        # Obtener todas las tarifas con sus relaciones
+        tarifas = session.query(Tarifa).join(
+            ServicioTransportista
+        ).join(
+            Transportista
+        ).order_by(
+            Transportista.nombre,
+            ServicioTransportista.tipo_entrega,
+            Tarifa.provincia,
+            Tarifa.rango_min
+        ).all()
+        
+        # Escribir datos
+        for row, tarifa in enumerate(tarifas, 2):
+            servicio = tarifa.servicio
+            transportista = servicio.transportista
+            
+            # Generar nombre descriptivo del servicio
+            servicio_nombre = f"{servicio.tipo_entrega.value.replace('_', ' ').title()} ({servicio.metodo_calculo.value})"
+            
+            ws.cell(row=row, column=1, value=tarifa.id)
+            ws.cell(row=row, column=2, value=transportista.nombre)
+            ws.cell(row=row, column=3, value=servicio_nombre)
+            ws.cell(row=row, column=4, value=servicio.tipo_entrega.value)
+            ws.cell(row=row, column=5, value=servicio.metodo_calculo.value)
+            ws.cell(row=row, column=6, value=tarifa.provincia)
+            ws.cell(row=row, column=7, value=float(tarifa.rango_min))
+            ws.cell(row=row, column=8, value=float(tarifa.rango_max) if tarifa.rango_max else "")
+            ws.cell(row=row, column=9, value=float(tarifa.precio_fijo))
+        
+        # Ajustar ancho de columnas
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[chr(64 + col)].width = 15
+        
+        # Guardar archivo
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"tarifas_export_{timestamp}.xlsx"
+        wb.save(filename)
+        
+        print(f"\n✅ Tarifas exportadas correctamente")
+        print(f"📁 Archivo: {filename}")
+        print(f"📊 Total de tarifas: {len(tarifas)}")
+        
+    except Exception as e:
+        print(f"\n❌ Error al exportar tarifas: {e}")
+
+
+def importar_tarifas_excel(session):
+    """Importa tarifas desde un archivo Excel"""
+    if not EXCEL_DISPONIBLE:
+        print("\n❌ ERROR: La librería openpyxl no está instalada.")
+        print("Instala con: pip install openpyxl")
+        return
+    
+    filename = input("\nNombre del archivo Excel (ej: tarifas_export_20241216.xlsx): ").strip()
+    
+    if not Path(filename).exists():
+        print(f"\n❌ Error: El archivo '{filename}' no existe.")
+        return
+    
+    try:
+        # Cargar el archivo
+        wb = load_workbook(filename)
+        ws = wb.active
+        
+        # Verificar encabezados
+        headers_esperados = [
+            "ID", "Transportista", "Servicio", "Tipo Entrega", "Método Cálculo",
+            "Provincia", "Rango Min", "Rango Max", "Precio Fijo"
+        ]
+        
+        headers_archivo = [cell.value for cell in ws[1]]
+        if headers_archivo != headers_esperados:
+            print("\n❌ Error: El formato del archivo no es correcto.")
+            print(f"Encabezados esperados: {headers_esperados}")
+            print(f"Encabezados encontrados: {headers_archivo}")
+            return
+        
+        # Procesar filas
+        tarifas_nuevas = 0
+        tarifas_actualizadas = 0
+        errores = []
+        
+        for row_idx in range(2, ws.max_row + 1):
+            try:
+                tarifa_id = ws.cell(row=row_idx, column=1).value
+                transportista_nombre = ws.cell(row=row_idx, column=2).value
+                servicio_nombre = ws.cell(row=row_idx, column=3).value
+                tipo_entrega_str = ws.cell(row=row_idx, column=4).value
+                metodo_calculo_str = ws.cell(row=row_idx, column=5).value
+                provincia = ws.cell(row=row_idx, column=6).value
+                rango_min = ws.cell(row=row_idx, column=7).value
+                rango_max = ws.cell(row=row_idx, column=8).value
+                precio_fijo = ws.cell(row=row_idx, column=9).value
+                
+                # Validar datos obligatorios
+                if not all([transportista_nombre, servicio_nombre, tipo_entrega_str, 
+                           metodo_calculo_str, provincia, rango_min is not None, precio_fijo]):
+                    errores.append(f"Fila {row_idx}: Faltan datos obligatorios")
+                    continue
+                
+                # Buscar transportista
+                transportista = session.query(Transportista).filter(
+                    Transportista.nombre == transportista_nombre
+                ).first()
+                
+                if not transportista:
+                    errores.append(f"Fila {row_idx}: Transportista '{transportista_nombre}' no encontrado")
+                    continue
+                
+                # Convertir enums
+                try:
+                    tipo_entrega = TipoEntrega(tipo_entrega_str)
+                    metodo_calculo = MetodoCalculo(metodo_calculo_str)
+                except ValueError:
+                    errores.append(f"Fila {row_idx}: Tipo de entrega o método de cálculo inválido")
+                    continue
+                
+                # Buscar servicio
+                servicio = session.query(ServicioTransportista).filter(
+                    ServicioTransportista.transportista_id == transportista.id,
+                    ServicioTransportista.tipo_entrega == tipo_entrega,
+                    ServicioTransportista.metodo_calculo == metodo_calculo
+                ).first()
+                
+                if not servicio:
+                    errores.append(f"Fila {row_idx}: Servicio '{servicio_nombre}' no encontrado para '{transportista_nombre}'")
+                    continue
+                
+                # Convertir rango_max
+                rango_max_decimal = Decimal(str(rango_max)) if rango_max else None
+                
+                # Verificar si la tarifa existe (por ID o por combinación única)
+                tarifa_existente = None
+                if tarifa_id:
+                    tarifa_existente = session.query(Tarifa).filter(Tarifa.id == tarifa_id).first()
+                
+                if not tarifa_existente:
+                    # Buscar por combinación única
+                    tarifa_existente = session.query(Tarifa).filter(
+                        Tarifa.servicio_id == servicio.id,
+                        Tarifa.provincia == provincia,
+                        Tarifa.rango_min == Decimal(str(rango_min)),
+                        Tarifa.rango_max == rango_max_decimal if rango_max_decimal else Tarifa.rango_max.is_(None)
+                    ).first()
+                
+                if tarifa_existente:
+                    # Actualizar tarifa existente
+                    tarifa_existente.precio_fijo = Decimal(str(precio_fijo))
+                    tarifas_actualizadas += 1
+                else:
+                    # Crear nueva tarifa
+                    nueva_tarifa = Tarifa(
+                        servicio_id=servicio.id,
+                        provincia=provincia,
+                        rango_min=Decimal(str(rango_min)),
+                        rango_max=rango_max_decimal,
+                        precio_fijo=Decimal(str(precio_fijo))
+                    )
+                    session.add(nueva_tarifa)
+                    tarifas_nuevas += 1
+                    
+            except Exception as e:
+                errores.append(f"Fila {row_idx}: {str(e)}")
+        
+        # Confirmar cambios
+        if tarifas_nuevas > 0 or tarifas_actualizadas > 0:
+            confirmacion = input(f"\n¿Confirmar importación? ({tarifas_nuevas} nuevas, {tarifas_actualizadas} actualizadas) (S/n): ").strip().lower()
+            if confirmacion in ['s', 'si', 'sí', '']:
+                session.commit()
+                print(f"\n✅ Importación completada")
+                print(f"   📝 Tarifas nuevas: {tarifas_nuevas}")
+                print(f"   🔄 Tarifas actualizadas: {tarifas_actualizadas}")
+            else:
+                session.rollback()
+                print("\n❌ Importación cancelada")
+        else:
+            print("\n⚠️ No se encontraron cambios para aplicar")
+        
+        if errores:
+            print(f"\n⚠️ Se encontraron {len(errores)} errores:")
+            for error in errores[:10]:  # Mostrar solo los primeros 10
+                print(f"   • {error}")
+            if len(errores) > 10:
+                print(f"   ... y {len(errores) - 10} errores más")
+                
+    except Exception as e:
+        print(f"\n❌ Error al importar tarifas: {e}")
+        session.rollback()
+
+
 def listar_tarifas(session):
     """Lista todas las tarifas organizadas por transportista y servicio"""
     imprimir_separador()
@@ -193,10 +422,12 @@ def menu_principal():
         print("3. Comparar transportistas para TODOS los pedidos")
         print("4. Listar todos los pedidos")
         print("5. Listar tarifas de todos los transportistas")
-        print("6. Salir")
+        print("6. Exportar tarifas a Excel")
+        print("7. Importar tarifas desde Excel")
+        print("8. Salir")
         print()
         
-        opcion = input("Selecciona una opción (1-6): ").strip()
+        opcion = input("Selecciona una opción (1-8): ").strip()
         
         if opcion == '1':
             with db_manager.get_session() as session:
@@ -252,6 +483,16 @@ def menu_principal():
                 input("Presiona ENTER para continuar...")
         
         elif opcion == '6':
+            with db_manager.get_session() as session:
+                exportar_tarifas_excel(session)
+                input("Presiona ENTER para continuar...")
+        
+        elif opcion == '7':
+            with db_manager.get_session() as session:
+                importar_tarifas_excel(session)
+                input("Presiona ENTER para continuar...")
+        
+        elif opcion == '8':
             print("\n👋 ¡Hasta luego!")
             break
         
