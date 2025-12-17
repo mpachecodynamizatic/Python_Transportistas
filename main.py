@@ -98,11 +98,7 @@ def comparar_transportistas(pedido_id: int, session):
     imprimir_separador()
     print(f"📊 COMPARACIÓN DE TRANSPORTISTAS - Pedido {pedido_info['numero']}")
     imprimir_separador()
-    print(f"Provincia: {pedido_info['provincia']}")
-    print(f"Tipo de entrega: {pedido_info['tipo_entrega'].replace('_', ' ').title()}")
-    print(f"Peso total: {pedido_info['peso_total_kg']:.2f} kg")
-    print(f"Volumen total: {pedido_info['volumen_total_m3']:.4f} m³")
-    print(f"Palets estimados: {pedido_info['palets_total']:.2f}")
+    print(f"Provincia: {pedido_info['provincia']} | Tipo de entrega: {pedido_info['tipo_entrega'].replace('_', ' ').title()} | Peso: {pedido_info['peso_total_kg']:.2f} kg | Volumen: {pedido_info['volumen_total_m3']:.4f} m³ | Palets: {pedido_info['palets_total']:.2f}")
     print()
     
     if not todas:
@@ -113,15 +109,32 @@ def comparar_transportistas(pedido_id: int, session):
     print(f"🏆 RANKING DE OPCIONES ({len(todas)} disponibles):")
     print()
     
-    for i, cotizacion in enumerate(todas, 1):
-        emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "  "
-        print(f"{emoji} ", end="")
-        imprimir_cotizacion(cotizacion, i)
+    # Encabezado de la tabla
+    print(f"{'#':>3} {'Transportista':<20} {'Tipo Entrega':<25} {'Método':<8} {'Cantidad':>10} {'Precio':>10} {'Provincia Tarifa':<17}")
+    print("=" * 120)
     
+    # Datos
+    for i, cotizacion in enumerate(todas, 1):
+        posicion = f"{i}."
+        tipo_entrega = cotizacion.tipo_entrega.replace('_', ' ').title()
+        metodo = cotizacion.metodo_calculo.upper()
+        cantidad = cotizacion.cantidad_calculada
+        precio = cotizacion.precio_total
+        provincia = cotizacion.provincia
+        
+        # Formatear cantidad según el método
+        if metodo == "VOLUMEN":
+            cantidad_str = f"{cantidad:.2f} m³"
+        elif metodo == "PESO":
+            cantidad_str = f"{cantidad:.2f} kg"
+        else:  # PALETS
+            cantidad_str = f"{cantidad:.2f} pal"
+        
+        print(f"{posicion:>3} {cotizacion.transportista_nombre:<20} {tipo_entrega:<25} {metodo:<8} {cantidad_str:>10} {precio:>9.2f}€ {provincia:<17}")
+    
+    print()
     if len(todas) > 1:
-        print(f"💰 AHORRO: {ahorro:.2f}€ eligiendo la mejor opción")
-        porcentaje = (ahorro / float(todas[-1].precio_total)) * 100
-        print(f"   ({porcentaje:.1f}% más económico que la opción más cara)")
+        print(f"💰 AHORRO: {ahorro:.2f}€ eligiendo la mejor opción ({(ahorro / float(todas[-1].precio_total)) * 100:.1f}% más económico que la opción más cara)")
     
     imprimir_separador()
     print()
@@ -349,63 +362,80 @@ def importar_tarifas_excel(session):
 
 
 def listar_tarifas(session):
-    """Lista todas las tarifas organizadas por transportista y servicio"""
-    imprimir_separador()
-    print("💰 LISTADO DE TARIFAS")
-    imprimir_separador()
+    """Lista todas las tarifas en formato tabular"""
+    print("\n💰 LISTADO DE TARIFAS")
+    print("=" * 140)
     
-    transportistas = session.query(Transportista).filter(Transportista.activo == True).all()
+    # Obtener todas las tarifas con sus relaciones
+    tarifas = session.query(Tarifa).join(
+        ServicioTransportista
+    ).join(
+        Transportista
+    ).filter(
+        Transportista.activo == True,
+        ServicioTransportista.activo == True
+    ).order_by(
+        Transportista.nombre,
+        ServicioTransportista.tipo_entrega,
+        Tarifa.provincia,
+        Tarifa.rango_min
+    ).all()
     
-    if not transportistas:
-        print("❌ No hay transportistas disponibles")
+    if not tarifas:
+        print("❌ No hay tarifas disponibles")
         return
     
-    for transportista in transportistas:
-        print(f"\n📦 {transportista.nombre}")
-        print("=" * 60)
-        
-        servicios = session.query(ServicioTransportista).filter(
-            ServicioTransportista.transportista_id == transportista.id,
-            ServicioTransportista.activo == True
-        ).all()
-        
-        if not servicios:
-            print("  Sin servicios activos")
-            continue
-        
-        for servicio in servicios:
-            print(f"\n  🚚 Servicio: {servicio.tipo_entrega.value.replace('_', ' ').title()}")
-            print(f"     Método de cálculo: {servicio.metodo_calculo.value.upper()}")
-            
-            tarifas = session.query(Tarifa).filter(
-                Tarifa.servicio_id == servicio.id
-            ).order_by(Tarifa.provincia, Tarifa.rango_min).all()
-            
-            if not tarifas:
-                print("     Sin tarifas configuradas")
-                continue
-            
-            # Agrupar por provincia
-            provincias = {}
-            for tarifa in tarifas:
-                if tarifa.provincia not in provincias:
-                    provincias[tarifa.provincia] = []
-                provincias[tarifa.provincia].append(tarifa)
-            
-            for provincia, tarifas_prov in provincias.items():
-                print(f"\n     📍 {provincia}:")
-                for tarifa in tarifas_prov:
-                    rango_max = f"{tarifa.rango_max:.2f}" if tarifa.rango_max else "∞"
-                    unidad = {
-                        'peso': 'kg',
-                        'volumen': 'm³',
-                        'palets': 'palets'
-                    }[servicio.metodo_calculo.value]
-                    
-                    print(f"        • {tarifa.rango_min:.2f} - {rango_max} {unidad}: {tarifa.precio_fijo:.2f}€")
+    # Encabezado de la tabla
+    print(f"\n{'Transportista':<15} {'Tipo Entrega':<22} {'Método':<8} {'Provincia':<12} {'Rango Min':>10} {'Rango Max':>10} {'Precio':>10}")
+    print("=" * 140)
     
+    # Datos agrupados por transportista
+    transportista_actual = None
+    tipo_entrega_actual = None
+    
+    for tarifa in tarifas:
+        servicio = tarifa.servicio
+        transportista = servicio.transportista
+        
+        # Determinar unidad
+        unidad = {
+            MetodoCalculo.PESO: 'kg',
+            MetodoCalculo.VOLUMEN: 'm³',
+            MetodoCalculo.PALETS: 'pal'
+        }[servicio.metodo_calculo]
+        
+        # Formatear valores
+        transportista_nombre = transportista.nombre if transportista.nombre != transportista_actual else ""
+        tipo_entrega_str = servicio.tipo_entrega.value.replace('_', ' ').title()
+        
+        if transportista.nombre != transportista_actual or servicio.tipo_entrega.value != tipo_entrega_actual:
+            tipo_display = tipo_entrega_str
+        else:
+            tipo_display = ""
+        
+        metodo_str = servicio.metodo_calculo.value.upper()
+        rango_min_str = f"{tarifa.rango_min:.2f} {unidad}"
+        rango_max_str = f"{tarifa.rango_max:.2f} {unidad}" if tarifa.rango_max else "∞"
+        precio_str = f"{tarifa.precio_fijo:.2f}€"
+        
+        # Imprimir fila
+        print(f"{transportista_nombre:<15} {tipo_display:<22} {metodo_str:<8} {tarifa.provincia:<12} {rango_min_str:>10} {rango_max_str:>10} {precio_str:>10}")
+        
+        # Actualizar variables de control
+        transportista_actual = transportista.nombre
+        tipo_entrega_actual = servicio.tipo_entrega.value
+        
+        # Línea separadora entre transportistas
+        if transportista_nombre:
+            siguiente_idx = tarifas.index(tarifa) + 1
+            if siguiente_idx < len(tarifas):
+                siguiente_transportista = tarifas[siguiente_idx].servicio.transportista.nombre
+                if siguiente_transportista != transportista_actual:
+                    print("-" * 140)
+    
+    print("=" * 140)
+    print(f"\n📊 Total de tarifas: {len(tarifas)}")
     print()
-    imprimir_separador()
 
 
 def menu_principal():

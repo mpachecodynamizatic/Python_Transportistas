@@ -815,6 +815,178 @@ def cargar_datos_ejemplo(session: Session):
     ])
     print(f"   ✓ {pedido10.numero_pedido} - Barcelona, Instalación (Dormitorio infantil: Litera + Armario + Escritorio + Estantería)")
     
+    # Pedido 11: Salón completo - Instalación - Valencia
+    pedido11 = Pedido(
+        numero_pedido="PED-2024-011",
+        provincia_entrega="Valencia",
+        tipo_entrega=TipoEntrega.SUBIDA_INSTALACION
+    )
+    session.add(pedido11)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido11, producto=next(p for p in productos if p.codigo == "SOF002"), cantidad=1),
+        PedidoProducto(pedido=pedido11, producto=next(p for p in productos if p.codigo == "SIL003"), cantidad=2),
+        PedidoProducto(pedido=pedido11, producto=next(p for p in productos if p.codigo == "VIT001"), cantidad=1),
+        PedidoProducto(pedido=pedido11, producto=next(p for p in productos if p.codigo == "MES001"), cantidad=1),
+        PedidoProducto(pedido=pedido11, producto=next(p for p in productos if p.codigo == "LAM001"), cantidad=2),
+    ])
+    print(f"   ✓ {pedido11.numero_pedido} - Valencia, Instalación (Salón: Sofá 3p + 2 Sillones + Vitrina + Mesa + 2 Lámparas)")
+    
+    # Pedido 12: Tienda pequeña - Pie de calle - Madrid
+    pedido12 = Pedido(
+        numero_pedido="PED-2024-012",
+        provincia_entrega="Madrid",
+        tipo_entrega=TipoEntrega.PIE_CALLE
+    )
+    session.add(pedido12)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido12, producto=next(p for p in productos if p.codigo == "EST002"), cantidad=4),
+        PedidoProducto(pedido=pedido12, producto=next(p for p in productos if p.codigo == "VIT001"), cantidad=2),
+        PedidoProducto(pedido=pedido12, producto=next(p for p in productos if p.codigo == "ESP001"), cantidad=1),
+    ])
+    print(f"   ✓ {pedido12.numero_pedido} - Madrid, Pie de calle (Tienda: 4 Estanterías + 2 Vitrinas + Espejo)")
+    
+    # Pedido 13: Comedor extenso - Subida domicilio - Barcelona
+    pedido13 = Pedido(
+        numero_pedido="PED-2024-013",
+        provincia_entrega="Barcelona",
+        tipo_entrega=TipoEntrega.SUBIDA_DOMICILIO
+    )
+    session.add(pedido13)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido13, producto=next(p for p in productos if p.codigo == "MES002"), cantidad=1),
+        PedidoProducto(pedido=pedido13, producto=next(p for p in productos if p.codigo == "SIL002"), cantidad=8),
+        PedidoProducto(pedido=pedido13, producto=next(p for p in productos if p.codigo == "COM001"), cantidad=1),
+        PedidoProducto(pedido=pedido13, producto=next(p for p in productos if p.codigo == "LAM002"), cantidad=1),
+    ])
+    print(f"   ✓ {pedido13.numero_pedido} - Barcelona, Subida domicilio (Comedor: Mesa ext. + 8 Sillas + Cómoda + Lámpara)")
+    
+    # Pedido 14: Hogar nuevo - Instalación - Sevilla
+    pedido14 = Pedido(
+        numero_pedido="PED-2024-014",
+        provincia_entrega="Sevilla",
+        tipo_entrega=TipoEntrega.SUBIDA_INSTALACION
+    )
+    session.add(pedido14)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido14, producto=next(p for p in productos if p.codigo == "CAM001"), cantidad=2),
+        PedidoProducto(pedido=pedido14, producto=next(p for p in productos if p.codigo == "ARM001"), cantidad=2),
+        PedidoProducto(pedido=pedido14, producto=next(p for p in productos if p.codigo == "SOF001"), cantidad=1),
+        PedidoProducto(pedido=pedido14, producto=next(p for p in productos if p.codigo == "MES002"), cantidad=1),
+        PedidoProducto(pedido=pedido14, producto=next(p for p in productos if p.codigo == "SIL002"), cantidad=6),
+    ])
+    print(f"   ✓ {pedido14.numero_pedido} - Sevilla, Instalación (Hogar: 2 Camas + 2 Armarios + Sofá + Mesa + 6 Sillas)")
+    
+    # Pedido 15: Cocina completa - Subida domicilio - Madrid
+    pedido15 = Pedido(
+        numero_pedido="PED-2024-015",
+        provincia_entrega="Madrid",
+        tipo_entrega=TipoEntrega.SUBIDA_DOMICILIO
+    )
+    session.add(pedido15)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido15, producto=next(p for p in productos if p.codigo == "NEV001"), cantidad=1),
+        PedidoProducto(pedido=pedido15, producto=next(p for p in productos if p.codigo == "LVJ001"), cantidad=1),
+        PedidoProducto(pedido=pedido15, producto=next(p for p in productos if p.codigo == "HOR001"), cantidad=1),
+        PedidoProducto(pedido=pedido15, producto=next(p for p in productos if p.codigo == "MES001"), cantidad=1),
+        PedidoProducto(pedido=pedido15, producto=next(p for p in productos if p.codigo == "SIL002"), cantidad=4),
+    ])
+    print(f"   ✓ {pedido15.numero_pedido} - Madrid, Subida domicilio (Cocina: Nevera + Lavavajillas + Horno + Mesa + 4 Sillas)")
+    
+    # Pedido 16: Despacho profesional - Pie de calle - Valencia
+    pedido16 = Pedido(
+        numero_pedido="PED-2024-016",
+        provincia_entrega="Valencia",
+        tipo_entrega=TipoEntrega.PIE_CALLE
+    )
+    session.add(pedido16)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido16, producto=next(p for p in productos if p.codigo == "MES003"), cantidad=3),
+        PedidoProducto(pedido=pedido16, producto=next(p for p in productos if p.codigo == "SIL001"), cantidad=3),
+        PedidoProducto(pedido=pedido16, producto=next(p for p in productos if p.codigo == "EST002"), cantidad=5),
+        PedidoProducto(pedido=pedido16, producto=next(p for p in productos if p.codigo == "VIT001"), cantidad=1),
+    ])
+    print(f"   ✓ {pedido16.numero_pedido} - Valencia, Pie de calle (Despacho: 3 Escritorios + 3 Sillas + 5 Estanterías + Vitrina)")
+    
+    # Pedido 17: Habitación juvenil - Instalación - Barcelona
+    pedido17 = Pedido(
+        numero_pedido="PED-2024-017",
+        provincia_entrega="Barcelona",
+        tipo_entrega=TipoEntrega.SUBIDA_INSTALACION
+    )
+    session.add(pedido17)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido17, producto=next(p for p in productos if p.codigo == "CAM002"), cantidad=1),
+        PedidoProducto(pedido=pedido17, producto=next(p for p in productos if p.codigo == "ARM002"), cantidad=1),
+        PedidoProducto(pedido=pedido17, producto=next(p for p in productos if p.codigo == "MES003"), cantidad=1),
+        PedidoProducto(pedido=pedido17, producto=next(p for p in productos if p.codigo == "EST001"), cantidad=2),
+        PedidoProducto(pedido=pedido17, producto=next(p for p in productos if p.codigo == "LAM001"), cantidad=1),
+    ])
+    print(f"   ✓ {pedido17.numero_pedido} - Barcelona, Instalación (Juvenil: Cama ind. + Armario + Escritorio + 2 Estanterías + Lámpara)")
+    
+    # Pedido 18: Restaurante pequeño - Pie de calle - Sevilla
+    pedido18 = Pedido(
+        numero_pedido="PED-2024-018",
+        provincia_entrega="Sevilla",
+        tipo_entrega=TipoEntrega.PIE_CALLE
+    )
+    session.add(pedido18)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido18, producto=next(p for p in productos if p.codigo == "MES001"), cantidad=8),
+        PedidoProducto(pedido=pedido18, producto=next(p for p in productos if p.codigo == "SIL002"), cantidad=32),
+        PedidoProducto(pedido=pedido18, producto=next(p for p in productos if p.codigo == "ESP001"), cantidad=2),
+    ])
+    print(f"   ✓ {pedido18.numero_pedido} - Sevilla, Pie de calle (Restaurante: 8 Mesas + 32 Sillas + 2 Espejos)")
+    
+    # Pedido 19: Piso compartido - Subida domicilio - Madrid
+    pedido19 = Pedido(
+        numero_pedido="PED-2024-019",
+        provincia_entrega="Madrid",
+        tipo_entrega=TipoEntrega.SUBIDA_DOMICILIO
+    )
+    session.add(pedido19)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido19, producto=next(p for p in productos if p.codigo == "CAM002"), cantidad=3),
+        PedidoProducto(pedido=pedido19, producto=next(p for p in productos if p.codigo == "MES003"), cantidad=3),
+        PedidoProducto(pedido=pedido19, producto=next(p for p in productos if p.codigo == "SIL001"), cantidad=3),
+        PedidoProducto(pedido=pedido19, producto=next(p for p in productos if p.codigo == "LAV001"), cantidad=1),
+    ])
+    print(f"   ✓ {pedido19.numero_pedido} - Madrid, Subida domicilio (Piso compartido: 3 Camas + 3 Escritorios + 3 Sillas + Lavadora)")
+    
+    # Pedido 20: Almacén showroom - Instalación - Valencia
+    pedido20 = Pedido(
+        numero_pedido="PED-2024-020",
+        provincia_entrega="Valencia",
+        tipo_entrega=TipoEntrega.SUBIDA_INSTALACION
+    )
+    session.add(pedido20)
+    session.flush()
+    
+    session.add_all([
+        PedidoProducto(pedido=pedido20, producto=next(p for p in productos if p.codigo == "EST002"), cantidad=10),
+        PedidoProducto(pedido=pedido20, producto=next(p for p in productos if p.codigo == "VIT001"), cantidad=3),
+        PedidoProducto(pedido=pedido20, producto=next(p for p in productos if p.codigo == "ESP001"), cantidad=4),
+        PedidoProducto(pedido=pedido20, producto=next(p for p in productos if p.codigo == "LAM001"), cantidad=6),
+    ])
+    print(f"   ✓ {pedido20.numero_pedido} - Valencia, Instalación (Showroom: 10 Estanterías + 3 Vitrinas + 4 Espejos + 6 Lámparas)")
+    
     session.commit()
     print("\n✅ Datos de ejemplo cargados correctamente\n")
     
@@ -826,5 +998,5 @@ def cargar_datos_ejemplo(session: Session):
     print(f"Servicios:       16")
     print(f"Tarifas:         {len(tarifas)}")
     print(f"Productos:       {len(productos)}")
-    print(f"Pedidos:         10")
+    print(f"Pedidos:         20")
     print("=" * 60)
